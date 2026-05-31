@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+
 def sidebar_menu():
 
     # =====================================
@@ -67,6 +68,24 @@ def sidebar_menu():
             "✅ Payoff Connected"
         )
 
+        if (
+            "weighted_payoff_df"
+            in st.session_state
+        ):
+
+            st.sidebar.success(
+                "✅ Weighted Matrix Ready"
+            )
+
+        if (
+            "final_recommendation"
+            in st.session_state
+        ):
+
+            st.sidebar.success(
+                "✅ Recommendation Ready"
+            )
+
         st.sidebar.metric(
             "Alternatives",
             payoff_df.shape[0]
@@ -74,6 +93,13 @@ def sidebar_menu():
 
         st.sidebar.metric(
             "Criteria",
+            payoff_df.shape[1]
+        )
+
+        st.sidebar.metric(
+            "Total Cells",
+            payoff_df.shape[0]
+            *
             payoff_df.shape[1]
         )
 
@@ -132,7 +158,7 @@ def sidebar_menu():
     )
 
     # =====================================
-    # CURRENT BEST LOCATION
+    # CURRENT RECOMMENDATION
     # =====================================
 
     if (
@@ -153,7 +179,7 @@ def sidebar_menu():
         )
 
     # =====================================
-    # QUICK SUMMARY
+    # CRITERIA WEIGHTS
     # =====================================
 
     if (
