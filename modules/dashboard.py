@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 def show_dashboard():
 
     st.title("🤎 Business Location DSS")
@@ -71,18 +72,49 @@ def show_dashboard():
 
     st.markdown("---")
 
-    if (
-        "final_choice" in st.session_state
-    ):
+    st.subheader(
+        "🏆 Current Best Recommendation"
+    )
 
-        st.subheader(
-            "🏆 Current Best Recommendation"
-        )
+    final_rec = st.session_state.get(
+        "final_recommendation",
+        None
+    )
+
+    if final_rec is not None:
 
         st.success(
-            f"Lokasi terbaik saat ini: "
-            f"{st.session_state['final_choice']}"
+            f"Lokasi terbaik saat ini: {final_rec}"
         )
+
+        if (
+            "ranking_df" in st.session_state
+            and st.session_state["ranking_df"] is not None
+        ):
+
+            ranking_df = st.session_state[
+                "ranking_df"
+            ]
+
+            if len(ranking_df) > 0:
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+
+                    st.metric(
+                        "🥇 Top Location",
+                        ranking_df.iloc[0]["Location"]
+                    )
+
+                with col2:
+
+                    if "Votes" in ranking_df.columns:
+
+                        st.metric(
+                            "🗳️ Votes",
+                            ranking_df.iloc[0]["Votes"]
+                        )
 
     else:
 
