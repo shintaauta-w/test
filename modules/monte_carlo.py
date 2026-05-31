@@ -1,17 +1,21 @@
-# -*- coding: utf-8 -*-
-"""monte_carlo.py"""
-
 import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
 
+
 def show_monte_carlo():
 
     st.title("🎰 Monte Carlo Simulation")
 
+    st.write("""
+    Monte Carlo Simulation digunakan untuk
+    mensimulasikan ribuan kemungkinan hasil
+    berdasarkan distribusi payoff setiap lokasi.
+    """)
+
     # =====================================
-    # CHECK DATA
+    # VALIDATION
     # =====================================
 
     if (
@@ -30,18 +34,19 @@ def show_monte_carlo():
     ]
 
     # =====================================
-    # NUMBER OF SIMULATION
+    # SIMULATION SETTING
     # =====================================
 
     simulations = st.slider(
         "Number of Simulations",
-        100,
-        10000,
-        5000
+        min_value=100,
+        max_value=10000,
+        value=5000,
+        step=100
     )
 
     # =====================================
-    # MONTE CARLO PROCESS
+    # RUN SIMULATION
     # =====================================
 
     results = []
@@ -52,10 +57,19 @@ def show_monte_carlo():
             location
         ].values
 
+        mean_value = np.mean(values)
+
+        std_value = np.std(values)
+
         simulated = np.random.normal(
-            np.mean(values),
-            np.std(values),
+            mean_value,
+            std_value,
             simulations
+        )
+
+        probability_profit = (
+            np.mean(simulated > 0)
+            * 100
         )
 
         results.append({
@@ -68,6 +82,9 @@ def show_monte_carlo():
 
             "Risk (Std)":
             np.std(simulated),
+
+            "Probability Profit (%)":
+            probability_profit,
 
             "Maximum":
             np.max(simulated),
@@ -86,8 +103,10 @@ def show_monte_carlo():
         ascending=False
     )
 
+    result_df = result_df.round(4)
+
     # =====================================
-    # RESULT TABLE
+    # DISPLAY TABLE
     # =====================================
 
     st.subheader(
@@ -103,19 +122,23 @@ def show_monte_carlo():
     # BEST RESULT
     # =====================================
 
-    best_location = result_df.iloc[
-        0
-    ]["Location"]
+    best_location = result_df.iloc[0][
+        "Location"
+    ]
 
-    best_profit = result_df.iloc[
-        0
-    ]["Expected Profit"]
+    best_profit = result_df.iloc[0][
+        "Expected Profit"
+    ]
+
+    best_probability = result_df.iloc[0][
+        "Probability Profit (%)"
+    ]
 
     # =====================================
     # METRICS
     # =====================================
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
 
@@ -128,40 +151,51 @@ def show_monte_carlo():
 
         st.metric(
             "Expected Profit",
-            round(best_profit,4)
+            round(best_profit, 4)
+        )
+
+    with col3:
+
+        st.metric(
+            "Profit Probability",
+            f"{round(best_probability,2)}%"
         )
 
     # =====================================
-    # BAR CHART
+    # EXPECTED PROFIT CHART
     # =====================================
 
-    fig = px.bar(
+    st.subheader(
+        "📈 Expected Profit Comparison"
+    )
+
+    fig_profit = px.bar(
         result_df,
         x="Location",
         y="Expected Profit",
         color="Expected Profit",
-        color_continuous_scale="Brwnyl",
-        title=
-        "Expected Profit by Location"
+        color_continuous_scale="Brwnyl"
     )
 
     st.plotly_chart(
-        fig,
+        fig_profit,
         use_container_width=True
     )
 
     # =====================================
-    # RISK VISUALIZATION
+    # RISK CHART
     # =====================================
+
+    st.subheader(
+        "⚠️ Risk Comparison"
+    )
 
     fig_risk = px.bar(
         result_df,
         x="Location",
         y="Risk (Std)",
         color="Risk (Std)",
-        color_continuous_scale="Reds",
-        title=
-        "Risk Comparison Across Locations"
+        color_continuous_scale="Reds"
     )
 
     st.plotly_chart(
@@ -170,12 +204,38 @@ def show_monte_carlo():
     )
 
     # =====================================
-    # SAVE RESULT
+    # RISK RETURN MAP
+    # =====================================
+
+    st.subheader(
+        "🎯 Risk vs Return"
+    )
+
+    fig_scatter = px.scatter(
+        result_df,
+        x="Risk (Std)",
+        y="Expected Profit",
+        size="Probability Profit (%)",
+        color="Location",
+        hover_name="Location"
+    )
+
+    st.plotly_chart(
+        fig_scatter,
+        use_container_width=True
+    )
+
+    # =====================================
+    # SAVE SESSION
     # =====================================
 
     st.session_state[
         "monte_carlo_result"
     ] = best_location
+
+    st.session_state[
+        "monte_carlo_table"
+    ] = result_df
 
     # =====================================
     # FINAL RESULT
@@ -186,5 +246,9 @@ def show_monte_carlo():
     )
 
     st.info(
-        f"Expected Profit = {round(best_profit,4)}"
+        f"""
+        Expected Profit = {round(best_profit,4)}
+
+        Probability of Profit = {round(best_probability,2)}%
+        """
     )
