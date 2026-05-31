@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 
 
@@ -63,7 +64,7 @@ def show_recommendation():
     )
 
     # =====================================
-    # CALCULATE METHODS
+    # DSS METHODS
     # =====================================
 
     maximax = payoff_df.max(axis=1)
@@ -103,31 +104,7 @@ def show_recommendation():
     ]
 
     # =====================================
-    # VOTING RESULT
-    # =====================================
-
-    vote_result = (
-        pd.Series(votes)
-        .value_counts()
-        .reset_index()
-    )
-
-    vote_result.columns = [
-        "Location",
-        "Votes"
-    ]
-
-    final_choice = vote_result.iloc[0]["Location"]
-
-    total_votes = vote_result.iloc[0]["Votes"]
-
-    confidence = round(
-        (total_votes / len(votes)) * 100,
-        2
-    )
-
-    # =====================================
-    # METHOD TABLE
+    # METHOD RESULT TABLE
     # =====================================
 
     st.subheader(
@@ -156,8 +133,30 @@ def show_recommendation():
     )
 
     # =====================================
-    # VOTING TABLE
+    # VOTING RESULT
     # =====================================
+
+    vote_result = (
+        pd.Series(votes)
+        .value_counts()
+        .reset_index()
+    )
+
+    vote_result.columns = [
+        "Location",
+        "Votes"
+    ]
+
+    vote_result["Consensus (%)"] = round(
+        vote_result["Votes"] / len(votes) * 100,
+        2
+    )
+
+    final_choice = vote_result.iloc[0]["Location"]
+
+    total_votes = vote_result.iloc[0]["Votes"]
+
+    confidence = vote_result.iloc[0]["Consensus (%)"]
 
     st.subheader(
         "🗳️ Voting Result"
@@ -187,7 +186,77 @@ def show_recommendation():
     )
 
     # =====================================
-    # FINAL RESULT
+    # EV RANKING
+    # =====================================
+
+    st.subheader(
+        "📊 Final Ranking"
+    )
+
+    ranking_df = pd.DataFrame({
+
+        "Location": ev.index,
+
+        "Final Score": ev.values
+
+    })
+
+    ranking_df = ranking_df.sort_values(
+        by="Final Score",
+        ascending=False
+    )
+
+    ranking_df["Rank"] = range(
+        1,
+        len(ranking_df) + 1
+    )
+
+    ranking_df = ranking_df[
+        [
+            "Rank",
+            "Location",
+            "Final Score"
+        ]
+    ]
+
+    st.dataframe(
+        ranking_df,
+        use_container_width=True
+    )
+
+    # =====================================
+    # TOP 3 LOCATION
+    # =====================================
+
+    st.subheader(
+        "🥇 Top 3 Locations"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.metric(
+            "🥇 Rank 1",
+            ranking_df.iloc[0]["Location"]
+        )
+
+    with col2:
+
+        st.metric(
+            "🥈 Rank 2",
+            ranking_df.iloc[1]["Location"]
+        )
+
+    with col3:
+
+        st.metric(
+            "🥉 Rank 3",
+            ranking_df.iloc[2]["Location"]
+        )
+
+    # =====================================
+    # FINAL RECOMMENDATION
     # =====================================
 
     st.subheader(
@@ -210,45 +279,30 @@ def show_recommendation():
     with col2:
 
         st.metric(
-            "Confidence",
+            "Consensus",
             f"{confidence}%"
         )
 
     # =====================================
-    # EV RANKING
+    # FINAL SCORE CHART
     # =====================================
 
-    st.subheader(
-        "📊 Expected Value Ranking"
-    )
-
-    ranking_df = pd.DataFrame({
-
-        "Location": ev.index,
-
-        "EV Score": ev.values
-
-    })
-
-    ranking_df = ranking_df.sort_values(
-        by="EV Score",
-        ascending=False
-    )
-
-    ranking_df.reset_index(
-        drop=True,
-        inplace=True
-    )
-
-    ranking_df.index += 1
-
-    st.dataframe(
+    fig_rank = px.bar(
         ranking_df,
+        x="Location",
+        y="Final Score",
+        color="Final Score",
+        color_continuous_scale="Brwnyl",
+        title="Location Ranking Score"
+    )
+
+    st.plotly_chart(
+        fig_rank,
         use_container_width=True
     )
 
     # =====================================
-    # EXPLANATION
+    # DECISION EXPLANATION
     # =====================================
 
     st.subheader(
@@ -257,22 +311,32 @@ def show_recommendation():
 
     st.info(
         f"""
-        Lokasi {final_choice} dipilih karena memperoleh
-        dukungan dari {total_votes} metode DSS
-        dengan tingkat konsensus sebesar
-        {confidence}%.
-        
-        Hasil ini diperoleh dari kombinasi
-        metode Expected Value (EV),
-        Maximax, Maximin,
-        Laplace, dan Minimax Regret.
+        Lokasi {final_choice} dipilih sebagai
+        alternatif terbaik karena memperoleh
+        dukungan dari {total_votes} metode DSS.
+
+        Tingkat konsensus keputusan mencapai
+        {confidence}% sehingga lokasi ini
+        dianggap paling konsisten unggul
+        dibandingkan alternatif lainnya.
+
+        Evaluasi dilakukan menggunakan
+        Expected Value (EV),
+        Maximax,
+        Maximin,
+        Laplace,
+        dan Minimax Regret.
         """
     )
 
     # =====================================
-    # STORE SESSION
+    # SAVE RESULT
     # =====================================
 
     st.session_state[
         "final_recommendation"
     ] = final_choice
+
+    st.session_state[
+        "ranking_df"
+    ] = ranking_df
