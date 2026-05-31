@@ -148,15 +148,24 @@ def show_recommendation():
     ]
 
     vote_result["Consensus (%)"] = round(
-        vote_result["Votes"] / len(votes) * 100,
+        vote_result["Votes"]
+        /
+        len(votes)
+        * 100,
         2
     )
 
-    final_choice = vote_result.iloc[0]["Location"]
+    final_choice = vote_result.iloc[0][
+        "Location"
+    ]
 
-    total_votes = vote_result.iloc[0]["Votes"]
+    total_votes = vote_result.iloc[0][
+        "Votes"
+    ]
 
-    confidence = vote_result.iloc[0]["Consensus (%)"]
+    confidence = vote_result.iloc[0][
+        "Consensus (%)"
+    ]
 
     st.subheader(
         "🗳️ Voting Result"
@@ -186,7 +195,7 @@ def show_recommendation():
     )
 
     # =====================================
-    # EV RANKING
+    # FINAL RANKING
     # =====================================
 
     st.subheader(
@@ -195,9 +204,14 @@ def show_recommendation():
 
     ranking_df = pd.DataFrame({
 
-        "Location": ev.index,
+        "Location":
+        ev.index,
 
-        "Final Score": ev.values
+        "Final Score":
+        np.round(
+            ev.values,
+            4
+        )
 
     })
 
@@ -232,31 +246,90 @@ def show_recommendation():
         "🥇 Top 3 Locations"
     )
 
-    col1, col2, col3 = st.columns(3)
+    if len(ranking_df) >= 3:
 
-    with col1:
+        col1, col2, col3 = st.columns(3)
 
-        st.metric(
-            "🥇 Rank 1",
-            ranking_df.iloc[0]["Location"]
-        )
+        with col1:
 
-    with col2:
+            st.metric(
+                "🥇 Rank 1",
+                ranking_df.iloc[0]["Location"]
+            )
 
-        st.metric(
-            "🥈 Rank 2",
-            ranking_df.iloc[1]["Location"]
-        )
+        with col2:
 
-    with col3:
+            st.metric(
+                "🥈 Rank 2",
+                ranking_df.iloc[1]["Location"]
+            )
 
-        st.metric(
-            "🥉 Rank 3",
-            ranking_df.iloc[2]["Location"]
-        )
+        with col3:
+
+            st.metric(
+                "🥉 Rank 3",
+                ranking_df.iloc[2]["Location"]
+            )
 
     # =====================================
-    # FINAL RECOMMENDATION
+    # FINAL SCORE CHART
+    # =====================================
+
+    fig_rank = px.bar(
+        ranking_df,
+        x="Location",
+        y="Final Score",
+        color="Final Score",
+        color_continuous_scale="Brwnyl",
+        title="Location Ranking Score"
+    )
+
+    st.plotly_chart(
+        fig_rank,
+        use_container_width=True
+    )
+
+    # =====================================
+    # SENSITIVITY ANALYSIS
+    # =====================================
+
+    st.subheader(
+        "🔬 Sensitivity Analysis"
+    )
+
+    sensitivity = []
+
+    for col in payoff_df.columns:
+
+        modified = payoff_df.copy()
+
+        modified[col] = (
+            modified[col] * 1.1
+        )
+
+        score = modified.dot(weights)
+
+        sensitivity.append({
+
+            "Criteria":
+            col,
+
+            "Best Location":
+            score.idxmax()
+
+        })
+
+    sensitivity_df = pd.DataFrame(
+        sensitivity
+    )
+
+    st.dataframe(
+        sensitivity_df,
+        use_container_width=True
+    )
+
+    # =====================================
+    # FINAL RESULT
     # =====================================
 
     st.subheader(
@@ -284,24 +357,6 @@ def show_recommendation():
         )
 
     # =====================================
-    # FINAL SCORE CHART
-    # =====================================
-
-    fig_rank = px.bar(
-        ranking_df,
-        x="Location",
-        y="Final Score",
-        color="Final Score",
-        color_continuous_scale="Brwnyl",
-        title="Location Ranking Score"
-    )
-
-    st.plotly_chart(
-        fig_rank,
-        use_container_width=True
-    )
-
-    # =====================================
     # DECISION EXPLANATION
     # =====================================
 
@@ -316,21 +371,24 @@ def show_recommendation():
         dukungan dari {total_votes} metode DSS.
 
         Tingkat konsensus keputusan mencapai
-        {confidence}% sehingga lokasi ini
-        dianggap paling konsisten unggul
-        dibandingkan alternatif lainnya.
+        {confidence}%.
 
-        Evaluasi dilakukan menggunakan
+        Hasil diperoleh dari kombinasi
         Expected Value (EV),
         Maximax,
         Maximin,
         Laplace,
         dan Minimax Regret.
+
+        Sensitivity Analysis digunakan
+        untuk melihat stabilitas keputusan
+        apabila terjadi perubahan nilai
+        pada kriteria tertentu.
         """
     )
 
     # =====================================
-    # SAVE RESULT
+    # SAVE SESSION
     # =====================================
 
     st.session_state[
